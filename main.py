@@ -7,21 +7,18 @@ GITLAB_TOKEN = "<TODO>"
 
 
 def get_all_images_for_project(project):
-    response = get_api(f"/{project}/container_registry.json")
-    if response.status_code is not 200:
-        return []
-    all_image_info = response.json()
-    if len(all_image_info) > 0:
+    project_repositories = get_paged_api(f"/api/v4/projects/{project['id']}/registry/repositories")
+    if len(project_repositories) > 0:
         ret_list = []
-        for image in all_image_info:
-            image_name = image["path"]
-            image_tags = get_api(image["tags_path"]).json()
-            for image_tag in image_tags:
-                tag_name = image_tag["name"]
-                tag_size = image_tag["total_size"]
-                created_at = image_tag["created_at"]
+        for repository in project_repositories:
+            repo_tags = get_paged_api(f"/api/v4/projects/{project['id']}/registry/repositories/{repository['id']}/tags")
+            for tag in repo_tags:
+                tag_details = get_api(f"/api/v4/projects/{project['id']}/registry/repositories/{repository['id']}/tags/{tag['name']}").json()
+                tag_name = tag_details["name"]
+                tag_size = tag_details["total_size"]
+                created_at = tag_details["created_at"]
                 ret_list += [{
-                    "image_name": image_name,
+                    "image_name": tag['path'],
                     "image_tag": tag_name,
                     "size": tag_size,
                     "created_at": created_at
@@ -54,18 +51,23 @@ def main():
 
 def get_all_projects_path_with_namespaces():
     projects_json = get_paged_api("api/v4/projects")
-    return list(map(lambda x: x["path_with_namespace"], projects_json))
+    return list(map(lambda x: {'name': x["path_with_namespace"], 'id': x['id']}, projects_json))
 
 
 def get_paged_api(url):
     page = 1
     ret_array = []
-    response = get_api(url, page).json()
-    ret_array += response
-    while len(response) > 0:
+    response = get_api(url, page)
+    response_array = []
+    if response.status_code < 300:
+        response_array = response.json()
+    ret_array += response_array
+    while len(response_array) > 0:
         page += 1
-        response = get_api(url, page).json()
-        ret_array += response
+        response = get_api(url, page)
+        if response.status_code < 300:
+            response_array = response.json()
+            ret_array += response_array
     return ret_array
 
 
