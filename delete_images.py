@@ -1,6 +1,10 @@
-import csv
+from datetime import datetime, timedelta
 
-from gitlab import get_paged_api, get_api
+from gitlab import get_paged_api, get_api, delete_api
+
+ENABLED_PROJECTS_TO_CLEAR = [
+
+]
 
 
 def get_all_images_for_project(project):
@@ -18,26 +22,12 @@ def get_all_images_for_project(project):
                     "image_name": tag['path'],
                     "image_tag": tag_name,
                     "size": tag_size,
-                    "created_at": created_at
+                    "created_at": created_at,
+                    "repository_id": repository['id']
                 }]
         return ret_list
     else:
         return []
-
-
-def get_all_images_for_each_project(projects):
-    ret_list = []
-    for project in projects:
-        ret_list += get_all_images_for_project(project)
-    return ret_list
-
-
-def write_image_info_to_csv(images_for_projects):
-    with open("output.csv", 'w') as resultFile:
-        wr = csv.DictWriter(resultFile, images_for_projects[0].keys(), dialect='excel')
-        wr.writeheader()
-        for image in images_for_projects:
-            wr.writerow(image)
 
 
 def get_all_projects_path_with_namespaces():
@@ -45,10 +35,21 @@ def get_all_projects_path_with_namespaces():
     return list(map(lambda x: {'name': x["path_with_namespace"], 'id': x['id']}, projects_json))
 
 
+def delete_old_images_if_enabled(project):
+    if project['name'] not in ENABLED_PROJECTS_TO_CLEAR:
+        print(f'skipping project: {project["name"]}')
+        return
+    images = get_all_images_for_project(project)
+    images_to_delete = list(filter(lambda image: datetime.fromisoformat(image['created_at']).replace(tzinfo=None) < (datetime.now() - timedelta(days=14)), images))
+    for image_to_delete in images_to_delete:
+        print(f'deleting {image_to_delete["image_name"]}')
+        delete_api(f"/api/v4/projects/{project['id']}/registry/repositories/{image_to_delete['repository_id']}/tags/{image_to_delete['image_tag']}")
+
+
 def main():
     projects = get_all_projects_path_with_namespaces()
-    images_for_projects = get_all_images_for_each_project(projects)
-    write_image_info_to_csv(images_for_projects)
+    for project in projects:
+        delete_old_images_if_enabled(project)
 
 
 if __name__ == "__main__":
