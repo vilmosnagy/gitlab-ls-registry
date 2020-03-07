@@ -1,8 +1,9 @@
+import os
 import requests
 
-GITLAB_URL = None
-GITLAB_USERNAME = None
-GITLAB_TOKEN = None
+GITLAB_URL = os.environ['GITLAB_URL']
+GITLAB_USERNAME = os.environ['GITLAB_USERNAME']
+GITLAB_TOKEN = os.environ['GITLAB_TOKEN']
 
 
 def get_paged_api(url):
