@@ -15,6 +15,7 @@ def get_all_images_for_project(project):
                 tag_size = tag_details["total_size"]
                 created_at = tag_details["created_at"]
                 ret_list += [{
+                    "image_path": repository['path'],
                     "image_name": tag['path'],
                     "image_tag": tag_name,
                     "size": tag_size,

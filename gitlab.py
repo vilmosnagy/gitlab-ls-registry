@@ -18,6 +18,7 @@ def get_paged_api(url):
         page += 1
         response = get_api(url, page)
         if response.status_code < 300:
+            print(f"Fetching: {url}")
             response_array = response.json()
             ret_array += response_array
     return ret_array

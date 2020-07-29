@@ -5,6 +5,7 @@ from gitlab import get_paged_api, get_api, delete_api
 
 ENABLED_PROJECTS_TO_CLEAR = [project.strip() for project in os.environ['ENABLED_PROJECTS_TO_CLEAR'].split(',')]
 
+
 def get_all_images_for_project(project):
     project_repositories = get_paged_api(f"/api/v4/projects/{project['id']}/registry/repositories")
     if len(project_repositories) > 0:
@@ -47,7 +48,7 @@ def delete_old_images_if_enabled(project):
 def main():
     print("Will delete images older than 2 weeks from the following repositories: ")
     for image in ENABLED_PROJECTS_TO_CLEAR:
-        print(f" - {image}")
+        print(f" - '{image}'")
     print()
 
     projects = get_all_projects_path_with_namespaces()
